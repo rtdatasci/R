@@ -1,0 +1,13 @@
+name: popular_babynames
+title: popular_babynames
+username:
+account: throwaway
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 9083125
+bundleId: 7201816
+url: https://throwaway.shinyapps.io/popular_babynames/
+when: 1683762674.8827
+lastSyncTime: 1683762674.88273
+asMultiple: FALSE
+asStatic: FALSE
