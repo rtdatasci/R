@@ -12,7 +12,8 @@ library(leaflet)
 
 ## global 
 # Data downloaded from: https://www.kaggle.com/datasets/NUFORC/ufo-sightings
-usa_ufo_sightings <- read.csv("~/rtdatasci_github/R/alienz/scrubbed.csv")
+usa_ufo_sightings <- read.csv("~/rtdatasci_github/R/alienz/scrubbed.csv") # for local test
+#usa_ufo_sightings <- read.csv("scrubbed.csv") # path in project directory for publishing
 
 ## Pre-processing and cleanup
 # remove rows with no state data (to keep US only data for this case)
