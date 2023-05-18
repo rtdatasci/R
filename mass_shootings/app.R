@@ -8,6 +8,7 @@ library(ggplot2)
 library(plotly)
 library(tidyr)
 library(dplyr)
+library(stringr)
 library(DT)
 library(tidytext) # for tf_idf
 library(forcats)
@@ -17,8 +18,12 @@ library(leaflet)
 
 
 # Data from: https://www.kaggle.com/datasets/zusmani/us-mass-shootings-last-50-years?select=Mass+Shootings+Dataset.csv
+# Updated data from: https://www.motherjones.com/politics/2012/12/mass-shootings-mother-jones-full-data/
 setwd('~/rtdatasci_github/R/mass_shootings')
-mass_shootings <- read.csv("Mass Shootings Dataset.csv")
+data_kaggle <- read.csv("Mass Shootings Dataset.csv")
+data_motherjones <- read.csv("Mother Jones - Mass Shootings Database, 1982 - 2023 - Sheet1.csv")
+
+
 
 # from Kaggle info on dataset
 text_about <- "Mass Shootings in the United States of America (1966-2017)
@@ -27,8 +32,31 @@ The average number of mass shootings per year is 7 for the last 50 years that wo
 
 
 ## Pre-processing and cleanup
-mass_shootings <- mass_shootings %>% 
-  mutate(Date = as.character(as.Date(Date, "%m/%d/%Y")))
+data_kaggle <- data_kaggle %>% mutate(Date = as.character(as.Date(Date, "%m/%d/%Y")))
+data_motherjones <- data_motherjones %>% mutate(date = as.character(as.Date(date, "%m/%d/%Y"))) 
+
+# fix date in data_motherjones that appear as 0017 to 2017 
+# confirmed with one case (Sutherland Springs, Texas 0017-11-05) search in google that 0017 refers to 2017
+data_motherjones <- data_motherjones %>% 
+  mutate(date =  ifelse(str_detect(date, "^00"), str_replace(date, "^00","20"), date))
+
+
+# merge two datasets by date
+mass_shootings <- data_kaggle  %>% 
+ 
+  bind_rows(data_motherjones %>%  
+              
+           # match class
+           dplyr::mutate(latitude = as.numeric(latitude),
+                     longitude = as.numeric(longitude)) %>% 
+           # match the col names
+           dplyr::rename(Date=date, 
+                         Summary=summary, 
+                         Fatalities=fatalities, 
+                         ocation=location, 
+                         Latitude=latitude, 
+                         Longitude=longitude))
+
 
 
 ## full page with no margins (instead of fulidpage)
