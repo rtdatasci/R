@@ -41,11 +41,10 @@ data_motherjones <- data_motherjones %>%
   mutate(date =  ifelse(str_detect(date, "^00"), str_replace(date, "^00","20"), date))
 
 
-# merge two datasets by date
+# merge two datasets
 mass_shootings <- data_kaggle  %>% 
  
   bind_rows(data_motherjones %>%  
-              
            # match class
            dplyr::mutate(latitude = as.numeric(latitude),
                      longitude = as.numeric(longitude)) %>% 
