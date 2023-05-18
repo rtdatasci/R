@@ -16,7 +16,7 @@ library(wordcloud2)
 
 
 # Data from: https://www.kaggle.com/datasets/kaggle/recipe-ingredients-dataset
-setwd('~/rtdatasci_github/R/cuisines')
+#setwd('~/rtdatasci_github/R/cuisines')  # for local app run test
 data <- fromJSON("train.json") %>% as.data.frame
 # format to separate each igredients to rows
 # df <- separate_rows(data, ingredients, sep = ",") # did not work -- missing values

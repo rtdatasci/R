@@ -1,0 +1,14 @@
+name: cuisines
+title: cuisines
+username:
+account: throwaway
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 9140338
+bundleId: 7235814
+url: https://throwaway.shinyapps.io/cuisines/
+when: 1684448424.76353
+lastSyncTime: 1684448424.76355
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: test.json
