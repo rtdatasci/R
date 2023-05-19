@@ -1,0 +1,222 @@
+---
+title: "Rise and fall of r packages"
+output: html_document
+date: "2023-05-19"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+Exploring and visualizing r packages use in the programming community based on "tags" assigned to questions in stackoverflow. This will give an insight on what might be of interest to someone who is trying to choose which areas to build skills on.
+
+Each Stack Overflow question has a tag, which marks a question to describe its topic or technology. For instance, there's a tag for languages like R or Python, and for packages like ggplot2 or pandas.
+
+Data: 
+Original source: https://data.stackexchange.com/
+Downloaded from here: https://gist.github.com/dgrtwo/a30d99baa9b7bfc9f2440b355ddd1f75
+
+A dataset with one observation for each tag in each year. The dataset includes both the number of questions asked in that tag in that year, and the total number of questions asked in that year.
+
+
+```{r packages}
+library(tidyverse)
+library(dplyr)
+library(data.table)
+library(stringi)
+library(readxl)
+library(readr)
+library(ggplot2)
+
+```
+
+## Data
+
+```{r data}
+setwd('~/rtdatasci_github/R/rise_and_fall/')
+data <- read.csv('by_tag_year.csv')
+
+```
+
+## Inspect the data
+```{r inspec}
+dim(data)
+str(data)
+
+```
+
+
+### Fraction table
+This data has one observation for each pair of a tag and a year, showing the number of questions asked in that tag in that year and the total number of questions asked in that year. For instance, there were 54 questions asked about the .htaccess tag in 2008, out of a total of 58390 questions in that year.
+
+Rather than just the counts, we're probably interested in a percentage: the fraction of questions that year that have that tag. So let's add that to the table.
+```{r }
+# Does the data have one observation for each pair of a tag and a year
+df <- data %>% mutate(tag_year = paste0(tag, "-", year)) %>% select(tag_year, number)
+if(nrow(df) == length(unique(df$tag_year))){ print("one to one relation between tag_year combination and records found")}
+
+# inspect one tag
+data %>% filter(str_detect(tag, "\\.htaccess") & year=="2008") 
+
+
+# add fraction of questions per year for a tag
+data_fraction <- data %>% 
+  mutate(fraction_of_questions = number/year_total)
+```
+
+
+## R status
+Is it growing or sinking? Is R keeping up with other programming languages?
+Check if the fraction of Stack Overflow questions that are about R has been increasing or decreasing over time.
+```{r R status}
+# Filter for R tags
+r_data <- data_fraction %>% filter(tag %in% c("r", "r-markdown"))
+
+# Print the new table
+r_data
+
+# Visualize R status over time
+r_data %>% 
+  ggplot(aes(x = year, y = fraction_of_questions,color = tag)) +
+  geom_point(size=4) +
+  scale_color_manual(values = c("r" = "blue", "r-markdown" = "red")) +
+  labs(title = "Year vs. Fraction of Questions", x = "Year", y = "Fraction of Questions")
+
+```
+
+
+## Other r-related tags
+Eg. dplyr and ggplot2. Are each of those tags increasing as a fraction of overall questions? Are any of them decreasing?
+
+We find from the second plot that all the selected r packages are on the rise.
+```{r }
+tags <- c("r", "r-markdown", "dplyr", "tidyverse", "ggplot2", "tidytext")
+
+# Filter for those tags
+data_tags <- data_fraction %>% filter(tag %in% tags)
+
+# Plot tags over time 
+data_tags %>% 
+  ggplot(aes(x = year, y = number ,color = tag)) +
+  geom_point(size=4) +
+  scale_color_discrete()+
+  labs(title = "Year vs. Number of Questions", x = "Year", y = "Number of Questions")
+
+# plot for R makes it harder to see individual packages, remove "r" and plot again:
+data_tags %>% 
+  filter(!tag == "r") %>% 
+  ggplot(aes(x = year, y = number,color = tag)) +
+  geom_point(size=4) +
+  scale_color_discrete()+
+  labs(title = "Year vs. Number of Questions", x = "Year", y = "Number of Questions") 
+
+# Summary:
+# ggplot2 had the highest number of quetions
+# all selected r packages saw decline in questions from 2017 to 2018
+
+```
+## Comprehensive list of r-pacakges
+r-packages that are in my system (source: CRAN)
+```{r }
+chooseCRANmirror(ind=1)  # Set the CRAN mirror index to 1 (or choose the appropriate index for your location)
+
+pkg_list <- available.packages()  %>% as.data.frame()
+dim(pkg_list)
+
+# since the pkg_list is too big, we will select the ones that have value in Depends to select relevant ones
+pkg_list <- pkg_list %>% filter(!is.na(Depends)|Depends=="")
+dim(pkg_list)
+
+
+# Filter for those tags
+data_comprehensive_tags <- data_fraction %>% filter(tag %in% tolower(pkg_list$Package))
+
+# plot for R makes it harder to see individual packages, remove "r" and plot again:
+data_comprehensive_tags %>% 
+  filter(!tag == "r") %>% 
+  ggplot(aes(x = year, y = number,color = tag)) +
+  geom_point() +
+  labs(title = "Year vs. Numbers", x = "Year", y = "number")+
+   # Remove the legend for the 'tag' variable because it was too overwhelming
+  theme(legend.position = "none")
+```
+
+### Subset comprehensive
+Plotting a really high dim dataframe wont provide usable insight, so we subet the dataset
+```{r}
+# select the ones that have >10000 questions
+data_comprehensive_tags %>% 
+  filter(!tag == "r") %>% 
+  filter(number > 10000) %>% 
+  ggplot(aes(x = year, y = number,color = tag)) +
+  geom_point() +
+  labs(title = "Year vs. Numbers", x = "Year", y = "number")
+
+## Summary
+# notice that although pkg list were gathered from available.packages() that looks for rpackages, the plot shows that the top questions were packages that are non native to R
+
+```
+### Top 10
+Since the list of available packages can be too large to visualize, we will focus on top ten growing and top ten shrinking r packages.
+
+Growing:
+```{r }
+data_comprehensive_tags %>% 
+  group_by(tag) %>% 
+  summarize(total_growth = max(number) - min(number)) %>%
+  arrange(desc(total_growth)) %>%
+  top_n(10)
+
+
+
+```
+
+Shrinking:
+```{r }
+data_comprehensive_tags %>%
+  group_by(tag) %>%
+  summarize(total_shrinkage = min(number) - max(number)) %>%
+  arrange(desc(total_shrinkage)) %>%
+  top_n(10)
+
+```
+
+
+
+## Most asked about language
+which tags have the most questions overall, not just within a particular year
+```{r}
+# total number of questions for each tag
+sorted_tags <- data_fraction %>%
+  group_by(tag) %>% 
+  summarize(total_questions =sum(number)) %>% 
+  arrange(desc(total_questions))
+  
+  
+
+# Print the new table
+head(sorted_tags,10)
+
+
+```
+
+
+
+## Summary
+Insights gathered from this exercise:
+
+
+```{r}
+# ggplot2 had the highest number of questions in stackover flow between 2009 to 2018
+
+# all selected r packages saw decline in questions from 2017 to 2018
+
+# sql from CRAN (collected from available.packages() is the most popular package over time
+
+# javascript has the most number of questions in stackoverflow 
+
+# where does r rank among all the tags for different programming languages,regardless of year
+print(paste0("R language rank among all tags: ", which(sorted_tags$tag == 'r')))
+
+```
