@@ -4,9 +4,6 @@ output: html_document
 date: "2023-05-19"
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
 
 ## Introduction
 Exploring and visualizing r packages use in the programming community based on "tags" assigned to questions in stackoverflow. This will give an insight on what might be of interest to someone who is trying to choose which areas to build skills on.
@@ -20,10 +17,11 @@ Downloaded from here: https://gist.github.com/dgrtwo/a30d99baa9b7bfc9f2440b355dd
 A dataset with one observation for each tag in each year. The dataset includes both the number of questions asked in that tag in that year, and the total number of questions asked in that year.
 
 
-```{r packages}
+```{r setup}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+
 library(tidyverse)
 library(dplyr)
-library(data.table)
 library(stringi)
 library(readxl)
 library(readr)
@@ -216,7 +214,7 @@ Insights gathered from this exercise:
 
 # javascript has the most number of questions in stackoverflow 
 
-# where does r rank among all the tags for different programming languages,regardless of year
+# where does r rank among all the tags for different programming languages,regardless of year: 21st
 print(paste0("R language rank among all tags: ", which(sorted_tags$tag == 'r')))
 
 ```
