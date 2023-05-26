@@ -21,7 +21,7 @@ Sys.setenv("AWS_DEFAULT_REGION" = 'us-west-2')
 ## add aws_key.json to .gitignore at the Repo folder level so it is not pushed to git
 
 # Load the JSON file
-json_data <- fromJSON(txt = "~/rtdatasci_github/R/aws/aws_key.json")
+json_data <- fromJSON(txt = "~/rtdatasci_github/R/aws_key.json")
 
 # assign the key and secret
 Sys.setenv("AWS_ACCESS_KEY_ID" = json_data$AWS_ACCESS_KEY_ID,
