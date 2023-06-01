@@ -1,0 +1,13 @@
+name: adam_clinical_subject_level
+title: adam_clinical_subject_level
+username:
+account: throwaway
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 9230277
+bundleId: 7293277
+url: https://throwaway.shinyapps.io/adam_clinical_subject_level/
+when: 1685642488.11707
+lastSyncTime: 1685642488.11712
+asMultiple: FALSE
+asStatic: FALSE
