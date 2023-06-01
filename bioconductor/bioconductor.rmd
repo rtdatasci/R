@@ -1,0 +1,245 @@
+# Bioconductor
+
+
+## Setup
+```{r setup, include = TRUE, warning=FALSE}
+
+# # install Bioconductor
+# if (!require("BiocManager", quietly = TRUE))
+# install.packages("BiocManager")
+# BiocManager::install(version = "3.17")  # version 3.17 compatible with R4.3
+# 
+# ## list Bioconductor packages
+# bpkgs <- c("GEOquery","org.Mm.eg.db","GenomeInfoDbData","TxDb.Mmusculus.UCSC.mm10.knownGene","Mus.musculus","BiocStyle","limma","edgeR","RColorBrewer","gplots","gage","clusterProfiler","ReactomePA","GOSemSim","DOSE","enrichplot","getGEOSuppFiles")
+# 
+# # install Bioconductor packages
+# BiocManager::install(bpkgs, force = TRUE)
+# BiocManager::install("org.Mm.eg.db", force = TRUE)
+# 
+# ## list CRAN packages
+# rpkgs <- c("ggplot2","here","cli","R.utils","rmarkdown","knitr","utf8")
+# # install CRAN packages
+# install.packages(rpkgs)
+```
+
+### Libraries
+```{r libraries, include = TRUE, warning=FALSE}
+
+library(GEOquery)
+library(edgeR)
+library(org.Mm.eg.db)
+library(RColorBrewer)
+
+```
+
+## Data
+Retrieve the raw RNA-seq files using the GEO accession number for our dataset (GSE63310). These are usually provided in plan text files. This function `getGEOSuppFiles()` will detect the format. We will call this object `gse` which stands for GEO Series (GSE) and is used as an acronym used by the NCBI GEO repository.
+```{r }
+projdir <- "~/rtdatasci_github/R/bioconductor/"
+setwd(projdir)
+
+#?getGEOSuppFiles
+gse <- getGEOSuppFiles(GEO = "GSE63310", baseDir=paste0(projdir, "data"))
+
+```
+unzip the folder
+alternatively, can use tar -xf <tar_filename> in terminal command
+```{r}
+
+untar(tarfile=paste0(projdir, "data", "/GSE63310/GSE63310_RAW.tar"),
+      exdir=paste0(projdir, "data"))
+```
+
+
+
+### files list
+analyzing 9 of the 11 samples (each sample is in a separate file). 
+selecting the 9 primary cell types studied: *basal* cells, *luminal progenitor (LP)* cells, and *mature luminal-enriched (ML)* cells. Each cell type has 3 samples.
+store the corresponding cell types in another character vector called `celltypes`.
+```{r}
+files <- c("GSM1545535_10_6_5_11.txt", ## LP 
+           "GSM1545536_9_6_5_11.txt",  ## ML
+           "GSM1545538_purep53.txt",   ## basal
+           "GSM1545539_JMS8-2.txt",    ## basal
+           "GSM1545540_JMS8-3.txt",    ## ML
+           "GSM1545541_JMS8-4.txt",    ## LP
+           "GSM1545542_JMS8-5.txt",    ## basal
+           "GSM1545544_JMS9-P7c.txt",  ## ML
+           "GSM1545545_JMS9-P8c.txt")  ## LP
+celltypes <- c("LP", "ML", "Basal", "Basal", "ML", "LP", "Basal", "ML", "LP")
+```
+
+
+### Unpack and decompress files
+unzip the files one by one so we can look at them. Since there are only 9 we can use a for loop (if you have a lot more files or very large files, then you may want to use some more efficient method).
+```{r}
+# commented out for the purpose of knitting because unzip done during test
+
+# setwd(paste0(projdir, "data/GSE63310"))
+# for(f in paste(files, ".gz", sep="")) {
+#     gunzip(paste0(projdir, "data/GSE63310/", f), overwrite=TRUE)
+#}
+```
+
+This is a data frame with three columns: the gene ID (ENTREZID), length of the gene, and read counts from the run.
+```{r}
+setwd(paste0(projdir, "data/GSE63310"))
+
+
+files[1]
+f1 <- read.delim(files[1])
+dim(f1)
+head(f1)
+tail(f1)
+```
+
+### Create a digital gene expression (DGE) object
+create a `DGEList` object which will contain data from all 9 files. This requires us to indicate which columns represent the gene names and raw read counts. This assumes there is only one gene per row (no duplicates). 
+```{r}
+projdir <- "~/rtdatasci_github/R/bioconductor/"
+setwd(projdir)
+
+#?readDGE
+dge <- readDGE(files = files, path=paste0(projdir, "data/GSE63310/"),
+               columns = c(1,3), ## column 1 has the genes, column 3 has the counts
+               group = celltypes)
+dge
+```
+## Annotation
+
+```{r}
+dge_ids <- rownames(dge)
+length(dge_ids) ## find out how many genes are represented 
+
+```
+annotate the data with gene SYMBOLS instead of ENTREZIDs
+```{r}
+#?AnnotationDbi::select
+gene_ids <- AnnotationDbi::select(org.Mm.eg.db, 
+    keys = dge_ids, 
+    keytype = "ENTREZID",
+    columns = "SYMBOL")
+
+head(gene_ids)
+```
+add these identifiers to our dge count matrix by re-assigning the row names with SYMBOLs from our gene_ids object.
+```{r}
+rownames(dge$counts) <- gene_ids$SYMBOL
+dge
+```
+
+## Expression
+Calculate counts per million (CPM) and log-transform
+The cpm() function from the edgeR package calculates CPM values using the dge object that we have been working with. It can also calculate log2(CPM) values, which we will do by adding the log argument.
+```{r}
+#?cpm
+cpm <- cpm(dge)
+log2_cpm <- cpm(dge, log=TRUE)
+
+head(log2_cpm)
+```
+distribution of each counts
+```{r}
+hist(cpm)
+
+#The log transformation just makes the non-0 values more normally distributed which can simplify statistical testing of differences between sample types
+hist(log2_cpm)
+
+
+```
+### Filter and plot expression
+Filter out genes with low expression
+```{r}
+dim(dge)
+dge_sub <- dge[rowSums(cpm>1)>=3, ]
+dim(dge_sub)
+
+
+```
+
+Compare filtered to unfiltered data. We’re only going to be using ~52% of the data
+```{r}
+100 * nrow(dge_sub) / nrow(dge)
+
+```
+
+assign different colors to each of the 9 samples so we can overlay them and be able to distinguish them from each other more easily.
+```{r}
+#?RColorBrewer
+
+nsamples <- ncol(dge_sub) ## 9 samples
+col <- brewer.pal(n = nsamples, name = "Paired") ## the paird option gives up to 12 distinct colors 
+col
+```
+plot the log2(CPM) distributions for both raw and filtered data.
+```{r}
+log2cpm_raw <- cpm(dge, log=TRUE) ## raw unfiltered expression (log2 CPM)
+log2cpm_sub <- cpm(dge_sub, log=TRUE) ## filtered
+```
+density() function from the stats package will give us the data to plot the raw and filtered data. 
+```{r}
+
+density(log2cpm_raw[,1])
+density(log2cpm_sub[,1])
+
+```
+
+set up a plot with 2 side-by-side density plots. raw data on the left plot and the filtered data on the right (par() to put in left or right)
+```{r}
+par(mfrow=c(1,2))
+plot(density(log2cpm_raw[,1]),
+     col=col[1], 
+     lwd=2, 
+     ylim=c(0,0.21), 
+     las=2, 
+     main="", 
+     xlab="")
+title(main="A. Raw data", xlab="Log2(CPM)")
+
+
+abline(v=0, lty=3)
+
+for (i in 2:nsamples){
+    den <- density(log2cpm_raw[,i])
+    lines(den$x, den$y, col=col[i], lwd=2)
+}
+```
+
+second plot of filtered data on the right
+```{r}
+par(mfrow=c(1,2))
+plot(density(log2cpm_raw[,1]),
+     col=col[1], 
+     lwd=2, 
+     ylim=c(0,0.21), 
+     las=2, 
+     main="", 
+     xlab="")
+title(main="A. Raw data", xlab="Log2(CPM)")
+
+abline(v=0, lty=3)
+
+for (i in 2:nsamples){
+    den <- density(log2cpm_raw[,i])
+    lines(den$x, den$y, col=col[i], lwd=2)
+}
+
+```
+side by side
+```{r}
+plot(density(log2cpm_sub[,1]), 
+    col=col[1], 
+    lwd=2, 
+    ylim=c(0,0.21), 
+    las=2, 
+    main="", 
+    xlab="")
+title(main="B. Filtered data", xlab="Log2(CPM)")
+abline(v=0, lty=3)
+
+for (i in 2:nsamples){
+    den <- density(log2cpm_sub[,i])
+    lines(den$x, den$y, col=col[i], lwd=2)
+}
+
+```
