@@ -1,0 +1,68 @@
+---
+title: "nlp on reddit chatgpt comments"
+output: html_document
+date: "2023-05-30"
+---
+
+
+## Introduction
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(dplyr)
+library(readr)
+library(readxl)
+library(tm)
+library(tidytext)
+library(SnowballC)
+```
+
+## data
+read kaggle data
+dataset: https://www.kaggle.com/datasets/armitaraz/chatgpt-reddit
+```{r }
+df <- read_csv("~/rtdatasci_github/R/chatgpt_nlp/chatgpt-reddit-comments.csv", col_types = cols(.default = "c"))
+
+head(df)
+```
+
+
+## tokenization
+```{r }
+# Split the text_column into sentences
+df %>%
+  unnest_tokens(output = "sentences", input = comment_body, token = "sentences") %>%
+  # Count sentences
+  count(sentences)
+
+```
+
+
+
+## top words
+```{r }
+
+
+```
+
+## remove stop words
+```{r }
+
+
+```
+
+## stemming
+
+
+
+```{r }
+
+
+```
+
+
+
+
