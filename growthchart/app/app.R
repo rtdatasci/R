@@ -27,8 +27,8 @@ ui <- fluidPage(
   sidebarLayout(
     sidebarPanel(
       selectInput("sex", "Select Sex:", choices = c("Boys", "Girls"), selected = "Girls"),
-      textInput("birthday", "Enter Birthday (YYYY-MM-DD):", value = "2017-03-04"),
-      numericInput("height", "Enter Today's Height (cm):", value = 110, min = 0),
+      dateInput("birthday", "Select Birthday:", value = as.Date("2020-01-30")),
+      numericInput("height", "Enter Today's Height (cm):", value = 100, min = 0),
       actionButton("addButton", "Add Data")
     ),
     mainPanel(
@@ -49,8 +49,8 @@ server <- function(input, output) {
                                             Height = double(),
                                             PredictedHeight = double()))
   
-  # Reactive value to store the current height entered by the user, the default 110 is replaced with user input later on
-  current_height <- reactiveVal(110)
+  # Reactive value to store the current height entered by the user, the default 100 is replaced with user input later on
+  current_height <- reactiveVal(100)
   
   # Function to convert birthday to age in months
   calc_age <- function(birthday) {
