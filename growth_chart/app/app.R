@@ -23,7 +23,7 @@ ui <- fluidPage(
   sidebarLayout(
     sidebarPanel(
       selectInput("sex", "Select Sex:", choices = c("Boys", "Girls"), selected = "Girls"),
-      dateInput("birthday", "Select Birthday:", value = as.Date("2020-01-30")),
+      dateInput("birthday", "Select Birthday (YYYY-MM-DD):", value = as.Date("2020-01-30")),
       numericInput("height", "Enter Today's Height (cm):", value = 100, min = 0),
       actionButton("addButton", "Add Data")
     ),
