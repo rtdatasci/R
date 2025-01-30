@@ -5,30 +5,40 @@ library(ggplot2)
 library(scales)
 library(lubridate)
 library(DT)
+library(jsonlite)
 
-
-# Read the CDC growth chart data from the CSV file (stature data from https://www.cdc.gov/growthcharts/percentile_data_files.html) where 1:male 2:female, age in months, percentiles in cm
+# Read the CDC growth chart data from the CSV file
 cdc_growth_data <- read_csv("statage.csv") %>% 
-  #rename Sex for clarity
   mutate(Sex = ifelse(Sex=="1", "Boys", "Girls")) %>%
   rename(Age = Agemos) %>% 
-  # remove LMS (Lambda Mu and Sigma method) method used to smooth out percentile data -- not relevant here
   select(-L, -M, -S)
-
-
 
 # Define the UI
 ui <- fluidPage(
+  tags$head(
+    tags$script(HTML("
+      Shiny.addCustomMessageHandler('saveData', function(data) {
+        localStorage.setItem('userDataTable', JSON.stringify(data));
+      });
+      
+      Shiny.addCustomMessageHandler('loadData', function(message) {
+        var data = localStorage.getItem('userDataTable');
+        Shiny.setInputValue('loadedData', data);
+      });
+    "))
+  ),
   titlePanel("CDC Growth Data Plot"),
   sidebarLayout(
     sidebarPanel(
       selectInput("sex", "Select Sex:", choices = c("Boys", "Girls"), selected = "Girls"),
       dateInput("birthday", "Select Birthday (YYYY-MM-DD):", value = as.Date("2020-01-30")),
       numericInput("height", "Enter Today's Height (cm):", value = 100, min = 0),
-      actionButton("addButton", "Add Data")
+      actionButton("addButton", "Add Data"),
+      downloadButton("downloadData", "Download Data")
     ),
     mainPanel(
       plotOutput("growthPlot"),
+      plotOutput("historyPlot"),
       tabsetPanel(
         tabPanel("Data Table", DTOutput("dataTable"))
       )
@@ -36,17 +46,31 @@ ui <- fluidPage(
   )
 )
 
-
 # Define the server logic
-server <- function(input, output) {
+server <- function(input, output, session) {
   # Reactive values to store user data and data table
   data <- reactiveVal(cdc_growth_data)
-  user_data_table <- reactiveVal(data.frame(Date = as.Date(character()),
-                                            Sex = character(),
-                                            Height = double(),
-                                            PredictedHeight = double()))
   
-  # Reactive value to store the current height entered by the user, the default 100 is replaced with user input later on
+  user_data_table <- reactiveVal(data.frame(
+    Date = as.Date(character()),
+    Sex = character(),
+    Height = double(),
+    PredictedHeight = double()
+  ))
+  
+  # Load data from browser's local storage
+  observe({
+    session$sendCustomMessage("loadData", list())
+  })
+  
+  observeEvent(input$loadedData, {
+    if (!is.null(input$loadedData) && input$loadedData != "") {
+      loaded_data <- fromJSON(input$loadedData)
+      user_data_table(loaded_data %>% 
+                        mutate(Date = as.Date(Date)))
+    }
+  })
+  
   current_height <- reactiveVal(100)
   
   # Function to convert birthday to age in months
@@ -64,7 +88,7 @@ server <- function(input, output) {
       Height = input$height
     )
     data(bind_rows(cdc_growth_data, new_data))
-    current_height(input$height) # Update current_height with the new user input
+    current_height(input$height)
   })
   
   # Create the growth plot
@@ -106,11 +130,11 @@ server <- function(input, output) {
       Height = input$height,
       PredictedHeight = predicted_height_240
     )
-    # Check if there is any existing entry for today and remove it
-    user_data_table(user_data_table() %>%
-                      filter(Date != Sys.Date()))
-    # Add the new entry
-    user_data_table(bind_rows(user_data_table(), new_entry))
+    updated_data <- bind_rows(user_data_table(), new_entry)
+    user_data_table(updated_data)
+    
+    # Save updated data to browser's local storage
+    session$sendCustomMessage("saveData", toJSON(updated_data, dataframe = "rows"))
   })
   
   # Function to predict height at age 240 months using the fitted spline curve for P25
@@ -133,8 +157,27 @@ server <- function(input, output) {
       select(-PredictedHeight) %>%
       datatable(options = list(pageLength = 10))
   })
+  
+  # Create history plot
+  output$historyPlot <- renderPlot({
+    req(nrow(user_data_table()) > 0)
+    ggplot(user_data_table(), aes(x = Date, y = Height, color = Sex)) +
+      geom_point() +
+      geom_line() +
+      labs(title = "Height History", x = "Date", y = "Height (cm)") +
+      theme_minimal()
+  })
+  
+  # Download handler for user data
+  output$downloadData <- downloadHandler(
+    filename = function() {
+      paste("user_data_", Sys.Date(), ".csv", sep = "")
+    },
+    content = function(file) {
+      write_csv(user_data_table(), file)
+    }
+  )
 }
-
 
 # Run the Shiny app
 shinyApp(ui, server)
